@@ -1,6 +1,7 @@
 config_dir := home_directory()+"/.config"
 nix_darwin_dir := config_dir+"/nix-darwin" # local nix-darwin config directory
 repo := "" # "username/repo" for a nix-darwin config repo on GitHub
+tmp_dir := "/tmp/nix-darwin-autoinstall"
 
 nix := "/nix/var/nix/profiles/default/bin/nix"
 nix_installer := "/nix/nix-installer"
@@ -37,13 +38,18 @@ _cleanup:
 	#!/bin/dash
 	echo "{{ SUBTASK }} checking for dependencies installed outside of global Brewfile"
 	no_deps_found=true
+	mkdir -p '{{ tmp_dir }}'
+	brewlist='{{ tmp_dir }}/brewlist.txt'
+	brew list > "${brewlist}"
+	bundlelist='{{ tmp_dir }}/bundlelist.txt'
+	brew bundle list > "${bundlelist}"
 	for dep in {{ deps_to_check }}; do
-		dep_path=$(which $dep)
-		if [ -z "$dep_path" ]; then
+		dep_path=$(which "$dep")
+		if [ -z "${dep_path}" ]; then
 			continue
 		fi
-		dep_in_list=$(sh -c "brew list | grep -E '^${dep}$'")
-		dep_in_brewfile=$(sh -c "brew bundle list | grep '^${dep}$'")
+		dep_in_list=$(cat "${brewlist}" | grep -E "^${dep}$")
+		dep_in_brewfile=$(cat "${bundlelist}" | grep -E "^${dep}$")
 		if [ -n "$dep_path" ] && [ -z "$dep_in_list" ]; then
 			no_deps_found=false
 			echo "{{ WARNING }} $dep_path is installed, but not by homebrew: you may or may not want to clean up"
@@ -55,6 +61,7 @@ _cleanup:
 	if $no_deps_found; then
 		echo "{{ INFO }} no dependencies found outside of global Brewfile"
 	fi
+	rm -rf '{{ tmp_dir }}'
 
 [confirm("CONFIRM: clone ~/.config/nix-darwin and install all dependencies: Nix, Homebrew, git, and gh (GitHub CLI) if GITHUB_TOKEN env var is not defined?")]
 _install:
