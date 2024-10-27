@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
 	cat <<EOF
-Usage: $0 [-h] <task> <repo>
+Usage: $0 [--help] [--repo <repo>] <task>
 EOF
 }
 
@@ -19,10 +19,10 @@ Install nix-darwin with a single command.
 
 Args:
   <task>  The task to run: ${TASK_INSTALL}, ${TASK_REINSTALL}, or ${TASK_UNINSTALL}. (default: ${TASK_INSTALL})
-  <repo>  Your nix-darwin configuration repository on GitHub, ie, username/reponame (required for install/reinstall).
 
 Flags:
-  -h         Show this help message.
+  --help         Show this help message.
+  --repo <repo>  Your nix-darwin config repo on GitHub, ie, "username/reponame" (required for install/reinstall).
 EOF
 }
 
@@ -37,26 +37,24 @@ run() {
 	eval "${cmd}"
 }
 
-task="${1:-}"
+task="${1:-${TASK_INSTALL}}"
 repo="${2:-}"
 
-while getopts 'h' opt; do
-	case $opt in
-	h)
-		help
-		exit 0
-		;;
-	\?)
-		error "Invalid option: -$OPTARG"
-		usage
-		exit 1
-		;;
+args=$(getopt --long help,repo: -n "$0" -- "$@")
+eval set -- "$args"
+while :; do
+	case "${1}" in
+	--help) help; exit 0 ;;
+	--repo) repo="${2}"; shift 2 ;;
+	--) shift; break ;;
+	*) error "error parsing arguments"; exit 1 ;;
 	esac
 done
 
-if [ -z "${task}" ] \
-	|| ([ "${task}" != "${TASK_INSTALL}" ] && [ "${task}" != "${TASK_REINSTALL}" ] && [ "${task}" != "${TASK_UNINSTALL}" ]) \
-	|| ([ "${task}" != "${TASK_UNINSTALL}" ] && [ -z "${repo}" ]); then
+if ([ "${task}" != "${TASK_INSTALL}" ] \
+	&& [ "${task}" != "${TASK_REINSTALL}" ] \
+	&& [ "${task}" != "${TASK_UNINSTALL}" ]); then \
+	error "invalid task: ${task}"
 	help
 	exit 1
 fi
@@ -79,5 +77,9 @@ justfile_tmp="${tmp_dir}/justfile"
 [ -f "${justfile_tmp}" ] && run "rm '${justfile_tmp}'"
 run "curl --proto '=https' --tlsv1.2 -sSf -L https://raw.githubusercontent.com/ajlive/nix-darwin-autoinstall/main/justfile > '${justfile_tmp}'"
 
-run "${just} --justfile '${justfile_tmp}' ${task} repo=${repo}"
+if [ -n "${repo}" ]; then
+	run "${just} --justfile '${justfile_tmp}' repo='${repo}' ${task}"
+else
+	run "${just} --justfile '${justfile_tmp}' ${task}"
+fi
 [ -d "${tmp_dir}" ] && rm -rf "${tmp_dir}"
