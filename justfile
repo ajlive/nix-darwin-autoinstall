@@ -10,7 +10,8 @@ tmp_nix_installer := "/tmp/nix-installer"
 deps_to_check := "gh git"
 brewfile_deps := shell("brew bundle list | /usr/bin/grep -E '^(gh|git)$'")
 
-SUBTASK := "\\033[1;34mSUBTASK:\\033[0m"
+TASK := "\\033[1;95mTASK:\\033[0m"
+SUBTASK := "\\033[1;94mSUBTASK:\\033[0m"
 INFO := "\\033[1;32mINFO:\\033[0m"
 WARNING := "\\033[1;33mWARNING:\\033[0m"
 ERROR := "\\033[1;31mERROR:\\033[0m"
@@ -36,7 +37,6 @@ uninstall: _uninstall _cleanup
 
 _cleanup:
 	#!/bin/dash
-	echo "{{ SUBTASK }} checking for dependencies installed outside of global Brewfile"
 	no_deps_found=true
 	mkdir -p '{{ tmp_dir }}'
 	brewlist='{{ tmp_dir }}/brewlist.txt'
@@ -63,8 +63,12 @@ _cleanup:
 	fi
 	rm -rf '{{ tmp_dir }}'
 
-[confirm("CONFIRM: clone ~/.config/nix-darwin and install all dependencies: Nix, Homebrew, git, and gh (GitHub CLI) if GITHUB_TOKEN env var is not defined?")]
 _install:
+	@echo '{{ TASK }} install:'
+	@echo '  1. install Nix'
+	@echo '  2. install dependencies: Homebrew, git, and gh (GitHub CLI) if GITHUB_TOKEN env var is not defined'
+	@[ -n '{{ repo }}' ] \
+		& echo "  3. clone {{ repo }} to {{ nix_darwin_dir }}"
 	@[ ! -f '{{ nix }}' ] \
 		&& echo "{{ SUBTASK }} installing Nix" \
 		&& curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --no-confirm \
@@ -95,8 +99,10 @@ _install:
 			|| echo "{{ INFO }} {{ nix_darwin_dir }} already exists") \
 		|| echo '{{ INFO }} no repo name given, skipping repo cloning'
 
-[confirm("CONFIRM: uninstall Nix and remove ~/.config/nix-darwin?")]
 _uninstall:
+	@echo '{{ TASK }} uninstall:'
+	@echo '  1. uninstall Nix'
+	@echo '  2. remove ~/.config/nix-darwin'
 	@[ -f "{{ nix_installer }}" ] \
 		&& echo "{{ SUBTASK }} uninstalling Nix" \
 		&& {{ nix_installer }} uninstall --no-confirm \

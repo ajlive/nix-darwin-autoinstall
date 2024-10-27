@@ -11,9 +11,9 @@ TASK_INSTALL="install"
 TASK_REINSTALL="reinstall"
 TASK_UNINSTALL="uninstall"
 
-task="${TASK_INSTALL}"
-repo=''
-justfile='https://raw.githubusercontent.com/ajlive/nix-darwin-autoinstall/main/justfile'
+TASK_DEFAULT="${TASK_INSTALL}"
+REPO_DEFAULT=''
+JUSTFILE_DEFAULT='https://raw.githubusercontent.com/ajlive/nix-darwin-autoinstall/main/justfile'
 
 help() {
 	cat <<EOF
@@ -24,9 +24,9 @@ Install nix-darwin with a single command.
 Args:
 
 Flags:
-  --task             The task to run: ${TASK_INSTALL}, ${TASK_REINSTALL}, or ${TASK_UNINSTALL}. (default: ${task})
+  --task             The task to run: ${TASK_INSTALL}, ${TASK_REINSTALL}, or ${TASK_UNINSTALL}. (default: ${TASK_DEFAULT})
   --repo <repo>      Your nix-darwin config repo on GitHub, ie, "username/reponame".
-  --justfile <file>  The justfile to use for installation. (default: ${justfile})
+  --justfile <file>  The justfile to use for installation. (default: ${JUSTFILE_DEFAULT})
   --help             Show this help message.
 EOF
 }
@@ -45,7 +45,9 @@ run() {
 	eval "${cmd}"
 }
 
-echo "args: '$@'"
+task="${TASK_DEFAULT}"
+repo="${REPO_DEFAULT}"
+justfile="${JUSTFILE_DEFAULT}"
 set -- "$@"
 while :; do
 	opt="${1:---}"
@@ -71,8 +73,8 @@ if ([ "${task}" != "${TASK_INSTALL}" ] \
 fi
 
 tmp_dir='/tmp/nix-darwin-autoinstall'
-[ -d "${tmp_dir}" ] && run "rm -rf '${tmp_dir}'"
-run "mkdir -p '${tmp_dir}'"
+[ -d "${tmp_dir}" ] && rm -rf "${tmp_dir}"
+mkdir -p "${tmp_dir}"
 
 just="$(which just || echo -n -s '')"
 just_tmp="${tmp_dir}/just"
@@ -84,12 +86,15 @@ else
 	just="${just_tmp}"
 fi
 
-justfile_tmp="${tmp_dir}/justfile"
-run "curl --proto '=https' --tlsv1.2 -sSf -L https://raw.githubusercontent.com/ajlive/nix-darwin-autoinstall/main/justfile > '${justfile_tmp}'"
+if [ "${justfile}" == "${JUSTFILE_DEFAULT}" ]; then
+	justfile_tmp="${tmp_dir}/justfile"
+	run "curl --proto '=https' --tlsv1.2 -sSf -L https://raw.githubusercontent.com/ajlive/nix-darwin-autoinstall/main/justfile > '${justfile_tmp}'"
+	justfile="${justfile_tmp}"
+fi
 
 if [ -n "${repo}" ]; then
-	run "${just} --justfile '${justfile_tmp}' repo='${repo}' ${task}"
+	run "${just} --justfile '${justfile}' repo='${repo}' ${task}"
 else
-	run "${just} --justfile '${justfile_tmp}' ${task}"
+	run "${just} --justfile '${justfile}' ${task}"
 fi
 [ -d "${tmp_dir}" ] && rm -rf "${tmp_dir}"
