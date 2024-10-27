@@ -36,7 +36,7 @@ uninstall: _uninstall _cleanup
 	@echo "\033[1;32mNix and dependencies uninstalled and {{ nix_darwin_dir }} removed\033[0m"
 
 _cleanup:
-	#!/bin/dash
+	#!/bin/sh
 	no_deps_found=true
 	mkdir -p '{{ tmp_dir }}'
 	brewlist='{{ tmp_dir }}/brewlist.txt'

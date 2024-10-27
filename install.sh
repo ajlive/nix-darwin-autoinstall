@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 set -euo pipefail
 
 usage() {
@@ -86,12 +86,14 @@ else
 	just="${just_tmp}"
 fi
 
-if [ "${justfile}" == "${JUSTFILE_DEFAULT}" ]; then
+if [ "${justfile}" = "${JUSTFILE_DEFAULT}" ]; then
+	info "downloading justfile from ${justfile}"
 	justfile_tmp="${tmp_dir}/justfile"
-	run "curl --proto '=https' --tlsv1.2 -sSf -L https://raw.githubusercontent.com/ajlive/nix-darwin-autoinstall/main/justfile > '${justfile_tmp}'"
+	run "curl --proto '=https' --tlsv1.2 -sSf -L ${justfile} > '${justfile_tmp}'"
 	justfile="${justfile_tmp}"
 fi
 
+info "running just"
 if [ -n "${repo}" ]; then
 	run "${just} --justfile '${justfile}' repo='${repo}' ${task}"
 else
