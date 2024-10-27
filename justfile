@@ -71,13 +71,13 @@ _install:
 			&& echo "{{ SUBTASK }} installing git" \
 			&& brew update && brew install git \
 			|| echo "{{ INFO }} git is already installed") \
-		|| echo 'no repo given, skipping git installation'
+		|| echo '{{ INFO }} no repo name given, skipping git installation'
 	@[ -n '{{ repo }}' ] \
 		&& ([ -z "$GITHUB_TOKEN" ] && [ -z $(which gh) ] \
 			&& echo "{{ SUBTASK }} installing gh because GITHUB_TOKEN is undefined" \
 			&& brew update && brew install gh \
 			|| echo "{{ INFO }} GITHUB_TOKEN is defined or gh already installed") \
-		|| echo 'no repo given, skipping gh installation'
+		|| echo '{{ INFO }} no repo name given, skipping gh installation'
 	@[ -n '{{ repo }}' ] && [ ! -d '{{ nix_darwin_dir }}' ] \
 		&& (echo "{{ SUBTASK }} cloning {{ repo }} to {{ nix_darwin_dir }}" \
 			&& ( \
@@ -86,7 +86,7 @@ _install:
 				|| (gh repo clone {{ repo }} '{{ nix_darwin_dir }}') \
 			) \
 			|| echo "{{ INFO }} {{ nix_darwin_dir }} already exists") \
-		|| echo 'no repo given, skipping repo cloning'
+		|| echo '{{ INFO }} no repo name given, skipping repo cloning'
 
 [confirm("CONFIRM: uninstall Nix and remove ~/.config/nix-darwin?")]
 _uninstall:
