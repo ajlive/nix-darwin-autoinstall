@@ -65,19 +65,25 @@ repo=""
 verbose=false
 while getopts "hr:t:v" opt; do
 	case "${opt}" in
-	r) repo="${OPTARG}";;
-	t) task="${OPTARG}";;
-	v) verbose=true;;
-	h) help; exit 0;;
-	?) usage; exit 1;;
+	r) repo="${OPTARG}" ;;
+	t) task="${OPTARG}" ;;
+	v) verbose=true ;;
+	h)
+		help
+		exit 0
+		;;
+	?)
+		usage
+		exit 1
+		;;
 	esac
 done
 
 info "settings: task=${task}, repo=${repo}, verbose=${verbose}"
 
-if [ "${task}" != "${TASK_INSTALL}" ] \
-	&& [ "${task}" != "${TASK_REINSTALL}" ] \
-	&& [ "${task}" != "${TASK_UNINSTALL}" ]; then \
+if [ "${task}" != "${TASK_INSTALL}" ] &&
+	[ "${task}" != "${TASK_REINSTALL}" ] &&
+	[ "${task}" != "${TASK_UNINSTALL}" ]; then
 	error "invalid task: ${task}"
 	help
 	exit 1
@@ -256,7 +262,7 @@ reinstall() {
 	if [ -d "${NIX_DARWIN_DIR}" ] && [ -n "${repo}" ]; then
 		success "Nix and dependencies reinstalled and ${repo} cloned to ${NIX_DARWIN_DIR}"
 	else
-		 success "Nix and dependencies reinstalled"
+		success "Nix and dependencies reinstalled"
 	fi
 }
 
@@ -273,10 +279,13 @@ uninstall() {
 runv mkdir -p "${TMP_DIR}"
 
 case "${task}" in
-"${TASK_INSTALL}")   install;;
-"${TASK_REINSTALL}") reinstall;;
-"${TASK_UNINSTALL}") uninstall;;
-*)                   error "invalid task: ${task}"; exit 1;;
+"${TASK_INSTALL}") install ;;
+"${TASK_REINSTALL}") reinstall ;;
+"${TASK_UNINSTALL}") uninstall ;;
+*)
+	error "invalid task: ${task}"
+	exit 1
+	;;
 esac
 
 [ -d "${TMP_DIR}" ] && runv rm -rf "${TMP_DIR}"
