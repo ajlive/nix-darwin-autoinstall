@@ -139,26 +139,63 @@ runvcompl() {
 	eval "${cmd}"
 }
 
+xcode_cli_installed() {
+	[ -n "$(pkgutil --pkgs | grep -E 'com.apple.pkg.CLTools_Executables')" ] && return 0 || return 1
+}
+
+nix_installed() {
+	[ -f "${NIX}" ] && return 0 || return 1
+}
+
+brew_installed() {
+	[ -f "$(which brew)" ] && return 0 || return 1
+}
+
+repo_provided() {
+	[ -n "${repo}" ] && return 0 || return 1
+}
+
+config_dir_present() {
+	[ -d "${NIX_DARWIN_DIR}" ] && return 0 || return 1
+}
+
+do_clone_repo() {
+	repo_provided && ! config_dir_present && return 0 || return 1
+}
+
+github_token_defined() {
+	[ -n "${GITHUB_TOKEN}" ] && return 0 || return 1
+}
+
+gh_installed() {
+	[ -f "$(which gh)" ] && return 0 || return 1
+}
+
+gh_logged_in() {
+	[ -n "$(gh auth token)" ] && return 0 || return 1
+}
+
 subtask_cleanup() {
 	no_deps_found=true
 	brewlist="${TMP_DIR}/brewlist.txt"
 	runvcompl "brew list > ${brewlist}"
 	bundlelist="${TMP_DIR}/bundlelist.txt"
 	runvcompl "brew bundle list > ${bundlelist}"
-	deps="gh git"
+	deps="gh"
 	for dep in $deps; do
 		dep_path=$(which "$dep")
 		if [ -z "${dep_path}" ]; then
 			continue
 		fi
-		dep_in_list=$(grep -E "^${dep}$" "${brewlist}")
-		dep_in_brewfile=$(grep -E "^${dep}$" "${bundlelist}")
+		dep_in_list=$(grep -E "^${dep}$" "${brewlist}" || echo "")
+		dep_in_brewfile=$(grep -E "^${dep}$" "${bundlelist}" || echo "")
 		if [ -n "${dep_path}" ] && [ -z "${dep_in_list}" ]; then
 			no_deps_found=false
 			warning "${dep_path} is installed, but not by homebrew: you may or may not want to clean it up"
 		elif [ -n "${dep_in_list}" ] && [ -z "${dep_in_brewfile}" ]; then
 			no_deps_found=false
-			warning "${dep_path} is installed but not in global Brewfile: you may want to run\n  brew uninstall ${dep}"
+			warning "${dep_path} is installed but not in global Brewfile: you may want to run"
+			echo "  brew uninstall ${dep}"
 		fi
 	done
 	if $no_deps_found; then
@@ -167,51 +204,51 @@ subtask_cleanup() {
 }
 
 subtask_install() {
-	if [ ! -f "${NIX}" ]; then
+	if nix_installed; then
+		info "Nix is already installed"
+	else
 		subtask "installing Nix"
 		runcompl "curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --no-confirm"
-	else
-		info "Nix is already installed"
 	fi
 
-	if [ -z "$(which brew)" ]; then
+	if xcode_cli_installed; then
+		info "Xcode CLI tools are already installed"
+	else
+		subtask "installing Xcode CLI tools"
+		run xcode-select --install
+	fi
+
+	if brew_installed; then
+		info "Homebrew is already installed"
+	else
 		subtask "installing Homebrew"
 		run /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-	else
-		info "Homebrew is already installed"
 	fi
 
-	if [ -n "${repo}" ] && [ -z "$(which git)" ]; then
-		subtask "installing git"
-		run brew update
-		run brew install git
-	elif [ -n "${repo}" ]; then
-		info "git is already installed"
-	else
-		info "no repo name given, skipping git installation"
-	fi
-
-	if [ -n "${repo}" ] && [ -z "${GITHUB_TOKEN}" ] && [ -z "$(which gh)" ]; then
+	if config_dir_present; then
+		# TODO: check if repo is the same as the one cloned
+		true
+	elif do_clone_repo && (github_token_defined || gh_installed); then
+		info "GITHUB_TOKEN is defined or gh already installed"
+	elif do_clone_repo; then
 		subtask "installing gh because GITHUB_TOKEN is undefined"
 		run brew update
 		run brew install gh
-	elif [ -n "${repo}" ]; then
-		info "GITHUB_TOKEN is defined or gh already installed"
 	else
 		info "no repo name given, skipping gh installation"
 	fi
 
-	if [ -n "${repo}" ] && [ ! -d "${NIX_DARWIN_DIR}" ] && [ -n "${GITHUB_TOKEN}" ]; then
+	if do_clone_repo && github_token_defined; then
 		subtask "cloning ${repo} to ${NIX_DARWIN_DIR}"
 		run git clone "https://${GITHUB_TOKEN}@github.com/${repo}.git" "${NIX_DARWIN_DIR}"
-	elif [ -n "${repo}" ] && [ ! -d "${NIX_DARWIN_DIR}" ] && [ -z "$(gh auth token)" ]; then
+	elif do_clone_repo && ! gh_installed; then
 		subtask "cloning ${repo} to ${NIX_DARWIN_DIR}"
 		run gh auth login
 		run gh repo clone "${repo}" "${NIX_DARWIN_DIR}"
-	elif [ -n "${repo}" ] && [ ! -d "${NIX_DARWIN_DIR}" ]; then
+	elif do_clone_repo; then
 		subtask "cloning ${repo} to ${NIX_DARWIN_DIR}"
 		gh repo clone "${repo}" "${NIX_DARWIN_DIR}"
-	elif [ -n "${repo}" ]; then
+	elif repo_provided; then
 		info "${NIX_DARWIN_DIR} already exists"
 	else
 		info "no repo name given, skipping repo cloning"
@@ -219,14 +256,14 @@ subtask_install() {
 }
 
 subtask_uninstall() {
-	if [ -f "${NIX_INSTALLER}" ]; then
+	if nix_installed; then
 		subtask "uninstalling Nix"
 		run "${NIX_INSTALLER}" uninstall --no-confirm
 	else
 		info "Nix not installed"
 	fi
 
-	if [ -d "${NIX_DARWIN_DIR}" ]; then
+	if config_dir_present; then
 		subtask "removing ${NIX_DARWIN_DIR}"
 		run rm -rf "${NIX_DARWIN_DIR}"
 	else
@@ -237,15 +274,15 @@ subtask_uninstall() {
 install() {
 	task "install:"
 	echo "  1. install Nix"
-	echo "  2. install dependencies: Homebrew, git, and gh (GitHub CLI) if GITHUB_TOKEN env var is not defined"
-	if [ -n "${repo}" ]; then
+	echo "  2. install dependencies: Homebrew (may install Xcode CLI tools) and gh (GitHub CLI) if GITHUB_TOKEN env var is not defined"
+	if repo_provided; then
 		echo "  3. clone ${repo} to ${NIX_DARWIN_DIR}"
 	fi
 
 	subtask_install
 	subtask_cleanup
 
-	if [ -d "${NIX_DARWIN_DIR}" ]; then
+	if config_dir_present; then
 		success "Nix and dependencies installed and ${NIX_DARWIN_DIR} exists"
 	else
 		success "Nix and dependencies installed"
@@ -256,8 +293,8 @@ reinstall() {
 	task "reinstall:"
 	echo "  1. uninstall Nix"
 	echo "  2. remove ${NIX_DARWIN_DIR}"
-	echo "  2. reinstall dependencies: Homebrew, git, and gh (GitHub CLI) if GITHUB_TOKEN env var is not defined"
-	if [ -n "${repo}" ]; then
+	echo "  2. reinstall dependencies: Homebrew and gh (GitHub CLI) if GITHUB_TOKEN env var is not defined"
+	if repo_provided; then
 		echo "  3. clone ${repo} to ${NIX_DARWIN_DIR}"
 	fi
 
@@ -265,8 +302,10 @@ reinstall() {
 	subtask_install
 	subtask_cleanup
 
-	if [ -d "${NIX_DARWIN_DIR}" ] && [ -n "${repo}" ]; then
+	if repo_provided && config_dir_present; then
 		success "Nix and dependencies reinstalled and ${repo} cloned to ${NIX_DARWIN_DIR}"
+	elif config_dir_present; then
+		success "Nix and dependencies reinstalled and ${NIX_DARWIN_DIR} exists"
 	else
 		success "Nix and dependencies reinstalled"
 	fi
