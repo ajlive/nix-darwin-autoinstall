@@ -65,9 +65,15 @@ repo=""
 verbose=false
 while getopts "hr:t:v" opt; do
 	case "${opt}" in
-	r) repo="${OPTARG}" ;;
-	t) task="${OPTARG}" ;;
-	v) verbose=true ;;
+	r)
+		repo="${OPTARG}"
+		;;
+	t)
+		task="${OPTARG}"
+		;;
+	v)
+		verbose=true
+		;;
 	h)
 		help
 		exit 0
@@ -279,9 +285,15 @@ uninstall() {
 runv mkdir -p "${TMP_DIR}"
 
 case "${task}" in
-"${TASK_INSTALL}") install ;;
-"${TASK_REINSTALL}") reinstall ;;
-"${TASK_UNINSTALL}") uninstall ;;
+"${TASK_INSTALL}")
+	install
+	;;
+"${TASK_REINSTALL}")
+	reinstall
+	;;
+"${TASK_UNINSTALL}")
+	uninstall
+	;;
 *)
 	error "invalid task: ${task}"
 	exit 1
