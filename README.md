@@ -12,38 +12,38 @@ Setup script for automatically installing nix-darwin and dependencies.
 
 ```shell
 curl --proto '=https' --tlsv1.2 \
-	--silent --show-error --fail \
-	--location \
-	https://raw.githubusercontent.com/ajlive/nix-darwin-autoinstall/refs/heads/main/install \
-	| sh -s
+  --silent --show-error --fail \
+  --location \
+  https://raw.githubusercontent.com/ajlive/nix-darwin-autoinstall/refs/heads/main/install \
+  | sh -s
 ```
 
 ## Install with user's nix-darwin config repo (on GitHub)
 
 ```shell
 curl --proto '=https' --tlsv1.2 \
-	--silent --show-error --fail \
-	--location \
-	https://raw.githubusercontent.com/ajlive/nix-darwin-autoinstall/refs/heads/main/install \
-	| sh -s -- -r mygithubuser/mynixdarwinconfigrepo
+  --silent --show-error --fail \
+  --location \
+  https://raw.githubusercontent.com/ajlive/nix-darwin-autoinstall/refs/heads/main/install \
+  | sh -s -- -r mygithubuser/mynixdarwinconfigrepo
 ```
 
 ## Uninstall Nix
 
 ```shell
 curl --proto '=https' --tlsv1.2 \
-	--silent --show-error --fail \
-	--location \
-	https://raw.githubusercontent.com/ajlive/nix-darwin-autoinstall/refs/heads/main/install \
-	| sh -s -- -t uninstall
+  --silent --show-error --fail \
+  --location \
+  https://raw.githubusercontent.com/ajlive/nix-darwin-autoinstall/refs/heads/main/install \
+  | sh -s -- -t uninstall
 ```
 
 ## Reinstall (uninstall Nix and then install)
 
 ```shell
 curl --proto '=https' --tlsv1.2 \
-	--silent --show-error --fail \
-	--location \
-	https://raw.githubusercontent.com/ajlive/nix-darwin-autoinstall/refs/heads/main/install \
-	| sh -s -- -t reinstall
+  --silent --show-error --fail \
+  --location \
+  https://raw.githubusercontent.com/ajlive/nix-darwin-autoinstall/refs/heads/main/install \
+  | sh -s -- -t reinstall
 ```
